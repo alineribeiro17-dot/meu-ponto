@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Ponto</title>
+<meta name="theme-color" content="#CF4173">
+<meta name="description" content="Cartão de ponto simples">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #FCF3EA; color: #3A2A30; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px 40px; }
+  h1 { font-size: 24px; margin: 4px 0 2px; color: #CF4173; }
+  .data { color: #7A6A70; font-size: 16px; }
+  .relogio { font-size: 56px; font-weight: bold; text-align: center; margin: 14px 0 4px; letter-spacing: 1px; }
+  .status { text-align: center; font-size: 19px; padding: 12px; border-radius: 12px; margin: 8px 0 16px; }
+  .status.on { background: #E4F1EA; color: #2D6B4F; }
+  .status.alm { background: #FCE3D9; color: #9A3F25; }
+  .status.off { background: #FBE4EC; color: #A8325D; }
+  .btn { display: none; width: 100%; border: 0; border-radius: 18px; padding: 24px 10px; font-size: 27px;
+         font-weight: bold; color: #fff; margin-bottom: 14px; cursor: pointer; }
+  .btn.mostra { display: block; }
+  .verde { background: #3E8E6A; } .vermelho { background: #5D3140; } .laranja { background: #E2725B; }
+
+  .meudia { background: #fff; border-radius: 16px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .meudia h2 { font-size: 18px; margin: 0 0 10px; }
+  .tiles { display: flex; gap: 10px; }
+  .tile { flex: 1; border-radius: 14px; padding: 14px 8px; text-align: center; }
+  .tile .ic { font-size: 26px; }
+  .tile .num { font-size: 30px; font-weight: bold; margin: 4px 0 2px; }
+  .tile .rot { font-size: 14px; color: #7A6A70; }
+  .t1 { background: #FBE4EC; } .t1 .num { color: #CF4173; }
+  .t2 { background: #E4F1EA; } .t2 .num { color: #2D6B4F; }
+  .meudia .obs { text-align: center; font-size: 14px; color: #7A6A70; margin-top: 8px; }
+
+  .fila { background: #F1E6E9; color: #5D3140; border-radius: 12px; padding: 12px; font-size: 16px; margin-bottom: 14px; }
+  .aviso { background: #FBE9D4; color: #7A4A12; border-radius: 12px; padding: 12px; font-size: 16px; margin-bottom: 14px; }
+  .instalar { background: #F8E6EB; border: 2px solid #CF4173; border-radius: 14px; padding: 14px; margin-bottom: 16px; font-size: 16px; line-height: 1.5; }
+  .instalar h3 { margin: 0 0 6px; font-size: 18px; }
+  .instalar ol { margin: 6px 0 10px; padding-left: 22px; }
+  .instalar button { background: #CF4173; color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-size: 16px; }
+
+  .card { background: #fff; border-radius: 14px; padding: 14px; margin-top: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size: 18px; margin: 0 0 8px; }
+  .reg { padding: 10px 0; border-bottom: 1px solid #F3E8EA; font-size: 16px; cursor: pointer; }
+  .reg:last-child { border-bottom: 0; }
+  .reg .l1 { display: flex; justify-content: space-between; }
+  .reg .l2 { font-size: 13px; color: #8E7D83; margin-top: 2px; }
+  .reg b { min-width: 52px; display: inline-block; }
+  .dica { font-size: 13px; color: #8E7D83; margin-top: 6px; }
+  details summary { font-size: 18px; font-weight: bold; cursor: pointer; padding: 4px 0; }
+  label { display: block; font-size: 15px; margin: 10px 0 4px; color: #6A5359; }
+  input { width: 100%; font-size: 18px; padding: 10px; border: 1px solid #E2CFD5; border-radius: 10px; background: #fff; }
+  .campo { display: flex; gap: 6px; }
+  .campo button { border: 1px solid #E2CFD5; background: #fff; border-radius: 10px; font-size: 16px; padding: 0 12px; color: #CF4173; }
+  .linha2 { display: flex; gap: 10px; } .linha2 > div { flex: 1; min-width: 0; }
+  .btn2 { width: 100%; margin-top: 14px; padding: 14px; font-size: 18px; border: 0; border-radius: 12px;
+          background: #CF4173; color: #fff; font-weight: bold; cursor: pointer; }
+  .btnExcluir { width: 100%; margin-top: 10px; padding: 12px; font-size: 16px; border: 2px solid #B0303F;
+                border-radius: 12px; background: #fff; color: #B0303F; font-weight: bold; cursor: pointer; }
+  .btnExcluir.confirmar { background: #B0303F; color: #fff; }
+  .tot { font-size: 17px; line-height: 1.7; margin-top: 10px; }
+  .tot .v { font-size: 24px; font-weight: bold; color: #2D6B4F; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #5D3140; color: #fff;
+           padding: 14px 20px; border-radius: 12px; font-size: 17px; display: none; max-width: 90%; text-align: center; z-index: 9; }
+  .toast.erro { background: #B0303F; }
+  .carregando { position: fixed; inset: 0; background: rgba(255,255,255,.6); display: none;
+                align-items: center; justify-content: center; font-size: 20px; z-index: 8; }
+  a.pdf { display: block; margin-top: 12px; font-size: 17px; text-align: center; }
+  .ov { position: fixed; inset: 0; background: rgba(58,42,48,.55); display: none; align-items: center;
+        justify-content: center; z-index: 10; padding: 20px; }
+  .ov.mostra { display: flex; }
+  .fcard { width: 100%; max-width: 330px; background: #fff; border-radius: 22px; padding: 26px 20px 18px; text-align: center;
+           box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+  .fcard .fic { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center;
+                justify-content: center; font-size: 38px; }
+  .fcard .ftit { font-size: 17px; font-weight: bold; letter-spacing: .3px; text-transform: uppercase; }
+  .fcard .fhora { font-size: 50px; font-weight: bold; color: #3A2A30; margin: 4px 0 10px; }
+  .fcard .ffrase { font-size: 20px; line-height: 1.4; color: #3A2A30; margin: 0 4px 14px; }
+  .fcard .fnota { font-size: 14px; color: #9A3F25; background: #FCE3D9; border-radius: 10px; padding: 8px; margin-bottom: 10px; display: none; }
+  .fcard .fok { font-size: 14px; color: #8E7D83; }
+  .fdesp { font-size: 18px; font-weight: bold; color: #CF4173; margin: -4px 0 14px; display: none; }
+  .btnPrev { width: 100%; margin-top: 14px; padding: 14px; font-size: 18px; border: 2px solid #CF4173; border-radius: 12px;
+             background: #fff; color: #CF4173; font-weight: bold; cursor: pointer; display: none; }
+  .pv { position: fixed; inset: 0; background: #EDE3E6; z-index: 11; display: none; flex-direction: column; }
+  .pv.mostra { display: flex; }
+  .pv .barra { display: flex; gap: 8px; align-items: center; padding: 10px 12px; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .pv .barra b { flex: 1; font-size: 16px; color: #5D3140; }
+  .pv .barra button { border: 0; border-radius: 10px; padding: 10px 12px; font-size: 15px; font-weight: bold; cursor: pointer; }
+  .pv .area { flex: 1; overflow: auto; padding: 12px; }
+  .pv .folha { background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.15); overflow: hidden; margin: 0 auto; }
+  .pv .folha > div { width: 760px; padding: 34px; box-sizing: border-box; transform-origin: top left; }
+  .vazio { color: #8E7D83; font-size: 15px; }
+  .rodape { text-align: center; margin-top: 22px; }
+  .rodape a { color: #7A6A70; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="semConfig" style="display:none">
+  <h1>Meu Ponto</h1>
+  <div class="aviso" style="margin-top:16px">🔑 Este aparelho ainda não está ligado à planilha.<br><br>
+  Abra o app pelo <b>link completo</b> que você recebeu (ele já traz a chave de acesso).</div>
+</div>
+<div class="wrap" id="app">
+
+  <div class="instalar" id="instalar" style="display:none">
+    <h3>📲 Coloque o Meu Ponto na tela do celular</h3>
+    <div id="passosInstalar"></div>
+    <button id="btnInstalar" onclick="instalarAgora()" style="display:none">📲 Instalar o Meu Ponto</button>
+    <button id="btnJaFiz" onclick="jaInstalei()">Pronto, já fiz</button>
+  </div>
+
+  <h1 id="ola">Olá!</h1>
+  <div class="data" id="dataHoje"></div>
+  <div class="relogio" id="relogio">--:--</div>
+  <div class="status off" id="status">Carregando...</div>
+
+  <div id="pendentes"></div>
+  <div class="fila" id="fila" style="display:none"></div>
+
+  <button class="btn verde" id="btnEntrada" onclick="marcar('entrada')">☀️ Cheguei</button>
+  <button class="btn laranja" id="btnAlmoco" onclick="marcar('almoco')">🍽️ Fui almoçar</button>
+  <button class="btn laranja" id="btnVolta" onclick="marcar('volta')">↩️ Voltei do almoço</button>
+  <button class="btn vermelho" id="btnSaida" onclick="marcar('saida')">🏠 Fui embora</button>
+
+  <div class="meudia">
+    <h2>Meu dia</h2>
+    <div class="tiles">
+      <div class="tile t1"><div class="ic">⏱️</div><div class="num" id="mdHoras">0h00</div><div class="rot">trabalhadas</div></div>
+      <div class="tile t2"><div class="ic">💰</div><div class="num" id="mdValor">R$ 0,00</div><div class="rot">meu dia rendeu</div></div>
+    </div>
+    <div class="obs" id="mdObs"></div>
+  </div>
+
+  <div class="card">
+    <h2>Últimos dias</h2>
+    <div id="recentes" class="vazio">Nenhum registro ainda.</div>
+    <div class="dica">Toque em um dia para corrigir ou excluir.</div>
+  </div>
+
+  <div class="card">
+    <details id="detCorrigir">
+      <summary>✏️ Corrigir ou excluir horário</summary>
+      <label>Dia</label>
+      <input type="date" id="cData" onchange="carregarDia()">
+      <div class="linha2">
+        <div><label>Entrada</label>
+          <div class="campo"><input type="time" id="cEntrada"><button onclick="limpa('cEntrada')">✕</button></div></div>
+        <div><label>Saída</label>
+          <div class="campo"><input type="time" id="cSaida"><button onclick="limpa('cSaida')">✕</button></div></div>
+      </div>
+      <div class="linha2">
+        <div><label>Fui almoçar</label>
+          <div class="campo"><input type="time" id="cSaiAlm"><button onclick="limpa('cSaiAlm')">✕</button></div></div>
+        <div><label>Voltei do almoço</label>
+          <div class="campo"><input type="time" id="cVolAlm"><button onclick="limpa('cVolAlm')">✕</button></div></div>
+      </div>
+      <label>Observação (opcional)</label>
+      <input type="text" id="cObs" placeholder="Ex.: esqueci de marcar">
+      <div class="dica">O almoço não é obrigatório. Para apagar um horário, toque no ✕ e depois em Salvar.</div>
+      <button class="btn2" onclick="salvarCorrecao()">Salvar</button>
+      <button class="btnExcluir" id="btnExcluir" onclick="excluir()">🗑️ Excluir o dia inteiro</button>
+    </details>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>💰 Resumo e valor a receber</summary>
+      <div class="linha2">
+        <div><label>De</label><input type="date" id="rIni"></div>
+        <div><label>Até</label><input type="date" id="rFim"></div>
+      </div>
+      <button class="btn2" onclick="calcular()">Calcular</button>
+      <div class="tot" id="resTot"></div>
+      <button class="btnPrev" id="btnPrev" onclick="previa()">👀 Visualizar demonstrativo</button>
+      <button class="btn2" id="btnPdf" onclick="pdf()" style="display:none">📄 Gerar cartão de ponto (PDF)</button>
+      <div id="linkPdf"></div>
+    </details>
+  </div>
+
+  <div class="rodape"><a href="#" onclick="mostrarInstalar(true); return false;">📲 Como colocar na tela do celular</a></div>
+</div>
+
+<div class="ov" id="ov" onclick="fecharFrase()">
+  <div class="fcard">
+    <div class="fic" id="fIc"></div>
+    <div class="ftit" id="fTit"></div>
+    <div class="fhora" id="fHora"></div>
+    <div class="ffrase" id="fFrase"></div>
+    <div class="fdesp" id="fDesp"></div>
+    <div class="fnota" id="fNota">📶 Sem internet: guardado no celular. Vai para a planilha quando a conexão voltar.</div>
+    <div class="fok">Toque para fechar</div>
+  </div>
+</div>
+<div class="pv" id="pv">
+  <div class="barra">
+    <b>Prévia do demonstrativo</b>
+    <button style="background:#CF4173;color:#fff" onclick="fecharPrevia(); pdf()">📄 Gerar PDF</button>
+    <button style="background:#F3E6EA;color:#5D3140" onclick="fecharPrevia()">✕</button>
+  </div>
+  <div class="dica" style="text-align:center;margin:6px 0 0">Toque na folha para ampliar ou reduzir</div>
+  <div class="area"><div class="folha" id="pvFolha" onclick="zoomPrevia()"><div id="pvConteudo"></div></div></div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="carregando" id="carregando">Aguarde...</div>
+
+<script>
+  /* ---------- Ligação com a planilha (Apps Script) ---------- */
+  (function () {
+    function guardaCfg(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+    // Endereço da planilha (Apps Script /exec). Sem a chave, ele não dá acesso a nada.
+    var API_PADRAO = '';
+    var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+    var chave = h.get('c') || h.get('chave'), api = h.get('a') || h.get('api');
+    if (chave) {
+      guardaCfg('pontoChave', chave);
+      if (api) guardaCfg('pontoApi', api);
+      history.replaceState(null, '', location.pathname + location.search);   // tira a chave da barra de endereço
+    }
+    window.PONTO_API = guardaCfg('pontoApi') || API_PADRAO; window.PONTO_CHAVE = guardaCfg('pontoChave');
+
+    function chamar(acao, args) {
+      if (!window.PONTO_API) return Promise.reject(new Error('Abra o app pelo link completo que você recebeu.'));
+      return fetch(window.PONTO_API, { method: 'POST', redirect: 'follow',
+          body: JSON.stringify({ chave: window.PONTO_CHAVE, acao: acao, args: args }) })
+        .then(function (r) { if (!r.ok) throw new Error('NetworkError: HTTP ' + r.status); return r.json(); })
+        .then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro na planilha.'); return j.dados; });
+    }
+    var NOMES = { getEstado: 'estado' };
+    // Mesmo formato do Apps Script: google.script.run.withSuccessHandler(f).withFailureHandler(g).acao(...)
+    window.google = { script: { run: new Proxy({}, { get: function (_, k0) {
+      var ok = function () {}, ko = function () {};
+      var o = new Proxy({}, { get: function (_, k) {
+        if (k === 'withSuccessHandler') return function (f) { ok = f; return o; };
+        if (k === 'withFailureHandler') return function (f) { ko = f; return o; };
+        return function () {
+          var args = Array.prototype.slice.call(arguments);
+          chamar(NOMES[k] || k, args).then(function (d) {
+            if (k === 'getEstado' || (d && d.hojeRegs)) { try { localStorage.setItem('pontoEstado', JSON.stringify(d)); } catch (e) {} }
+            ok(d);
+          }, function (e) { ko(e); });
+        };
+      } });
+      return o[k0];
+    } }) } };
+  })();
+</script>
+<script>
+  var estado = null;
+  var DIAS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  var MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+  function $(id) { return document.getElementById(id); }
+  function br(iso) { var p = iso.split('-'); return p[2] + '/' + p[1]; }
+  function dia(iso) { var p = iso.split('-'); return DIAS[new Date(+p[0], p[1]-1, +p[2], 12).getDay()]; }
+  function brl(v) { return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+  function hm(min) { min = Math.max(0, min); return Math.floor(min/60) + 'h' + ('0' + (min%60)).slice(-2); }
+  function mins(h) { return +h.slice(0,2) * 60 + +h.slice(3,5); }
+  function agoraMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+  function isoMenos(iso, dias) {
+    var p = iso.split('-'); var d = new Date(+p[0], p[1]-1, +p[2], 12); d.setDate(d.getDate() - dias);
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }
+  function guarda(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+  function carregando(on) { $('carregando').style.display = on ? 'flex' : 'none'; }
+  function toast(msg, erro) {
+    var t = $('toast'); t.textContent = msg; t.className = 'toast' + (erro ? ' erro' : '');
+    t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(function(){ t.style.display = 'none'; }, 4000);
+  }
+  function falha(e) { carregando(false); toast((e && e.message) ? e.message.replace(/^Error:\s*/, '') : 'Algo deu errado. Tente de novo.', true); }
+
+  /* ---------- Saudação e relógio ---------- */
+  function saudacao() {
+    var h = new Date().getHours();
+    return h < 12 ? 'Bom dia' : (h < 18 ? 'Boa tarde' : 'Boa noite');
+  }
+  function iconeSaudacao() { var h = new Date().getHours(); return h < 12 ? ' ☀️' : (h < 18 ? ' 🌤️' : ' 🌙'); }
+  function tick() {
+    var d = new Date();
+    $('relogio').textContent = ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2);
+    $('dataHoje').textContent = DIAS[d.getDay()] + ', ' + d.getDate() + ' de ' + MESES[d.getMonth()];
+    var ap = estado && estado.apelido ? ', ' + estado.apelido : '';
+    $('ola').textContent = saudacao() + ap + '!' + iconeSaudacao();
+    meuDia();
+  }
+
+  /* ---------- Meu dia ---------- */
+  function minutosHoje() {
+    if (!estado) return 0;
+    var total = 0, agora = agoraMin();
+    estado.hojeRegs.forEach(function(r) {
+      if (!r.entrada) return;
+      var fim = r.saida ? mins(r.saida) : (r.saidaAlmoco && !r.voltaAlmoco ? mins(r.saidaAlmoco) : agora);
+      var m = fim - mins(r.entrada);
+      if (r.saidaAlmoco && r.voltaAlmoco) m -= mins(r.voltaAlmoco) - mins(r.saidaAlmoco);
+      total += Math.max(0, m);
+    });
+    return total;
+  }
+
+  function meuDia() {
+    if (!estado) return;
+    var total = 0, trabalhando = false, almocando = false;
+    var agora = agoraMin();
+    estado.hojeRegs.forEach(function(r) {
+      if (!r.entrada) return;
+      var fim;
+      if (r.saida) fim = mins(r.saida);
+      else if (r.saidaAlmoco && !r.voltaAlmoco) { fim = mins(r.saidaAlmoco); almocando = true; }
+      else { fim = agora; trabalhando = true; }
+      var m = fim - mins(r.entrada);
+      if (r.saidaAlmoco && r.voltaAlmoco) m -= mins(r.voltaAlmoco) - mins(r.saidaAlmoco);
+      total += Math.max(0, m);
+    });
+    $('mdHoras').textContent = hm(total);
+    $('mdValor').textContent = brl(Math.round(total / 60 * estado.valorHora * 100) / 100);
+    $('mdObs').textContent = !estado.hojeRegs.length ? 'Seu dia ainda não começou.'
+      : trabalhando ? 'Contando até agora...'
+      : almocando ? 'Pausado durante o almoço 🍽️'
+      : 'Dia encerrado. Bom descanso! 🏠';
+  }
+
+  /* ---------- Tela principal ---------- */
+  function mostra(id, sim) { $(id).className = $(id).className.replace(' mostra', '') + (sim ? ' mostra' : ''); }
+
+  function render(e) {
+    estado = e;
+    var ab = e.aberto, st = $('status');
+    var noAlmoco = ab && ab.saidaAlmoco && !ab.voltaAlmoco;
+    if (noAlmoco) {
+      st.className = 'status alm'; st.textContent = '🍽️ No almoço desde ' + ab.saidaAlmoco;
+    } else if (ab) {
+      st.className = 'status on'; st.textContent = '✅ Trabalhando desde ' + ab.entrada;
+    } else {
+      var feito = e.hojeRegs.filter(function(r){ return r.saida; }).pop();
+      st.className = 'status off';
+      st.textContent = feito ? 'Dia encerrado às ' + feito.saida + ' 👏' : 'Entrada de hoje ainda não marcada';
+    }
+    mostra('btnEntrada', !ab);
+    mostra('btnAlmoco', ab && !ab.saidaAlmoco);
+    mostra('btnVolta', noAlmoco);
+    mostra('btnSaida', ab && !noAlmoco);
+
+    $('pendentes').innerHTML = e.pendentes.map(function(p){
+      return '<div class="aviso">⚠️ Faltou marcar a saída de <b>' + dia(p.data) + ', ' + br(p.data) +
+             '</b>. Toque no dia em "Últimos dias" para corrigir.</div>';
+    }).join('');
+
+    $('recentes').className = e.recentes.length ? '' : 'vazio';
+    $('recentes').innerHTML = e.recentes.length ? e.recentes.map(function(r){
+      return '<div class="reg" onclick="abrirCorrecao(\'' + r.data + '\')"><div class="l1"><span><b>' + br(r.data) + '</b> ' +
+             dia(r.data).slice(0,3) + '</span><span>' + r.entrada + ' – ' + (r.saida || '…') + '</span><span>' +
+             (r.horas || '') + '</span></div>' + (r.almoco ? '<div class="l2">🍽️ almoço ' + r.saidaAlmoco + '–' +
+             r.voltaAlmoco + ' (' + r.almoco + ')</div>' : '') + '</div>';
+    }).join('') : 'Nenhum registro ainda.';
+
+    if (!$('cData').value) $('cData').value = e.hoje;
+    if (!$('rFim').value) { $('rFim').value = e.hoje; $('rIni').value = isoMenos(e.hoje, 14); }
+    tick();
+  }
+
+
+  /* ---------- Frases ---------- */
+  var VISUAL = {
+    entrada: { ic: '☀️', tit: 'Entrada registrada', cor: '#2D6B4F', bg: '#E4F1EA', mom: 'entrada' },
+    almoco:  { ic: '🍽️', tit: 'Bom almoço!',        cor: '#9A3F25', bg: '#FCE3D9', mom: 'almoco' },
+    volta:   { ic: '↩️', tit: 'Volta registrada',   cor: '#9A3F25', bg: '#FCE3D9', mom: 'volta' },
+    saida:   { ic: '🏠', tit: 'Saída registrada',   cor: '#CF4173', bg: '#FBE4EC', mom: 'saida' }
+  };
+  var PADRAO = { entrada: 'Ponto registrado! Tenha um lindo dia ☀️', almoco: 'Bom apetite! 🍽️',
+                 volta: 'De volta à ativa! 💪', saida: 'Bom descanso! 🏠', dialongo: 'Hoje foi puxado! Descansa bem 💤',
+                 despedida: 'Até amanhã! 👋' };
+  var DIAS_SEM = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+  var timerFrase = null;
+
+  function norm(t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace('-feira', '').replace(/\s+/g, '').trim();
+  }
+
+  function sortearFrase(momento) {
+    var d = new Date();
+    var ddmm = ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
+    var diaSem = DIAS_SEM[d.getDay()];
+    var lista = (estado && estado.frases) || [];
+    var doMomento = lista.filter(function(x){ return norm(x.m) === momento; });
+    var pool = doMomento.filter(function(x){ return x.d.replace(/\s/g, '').slice(0, 5) === ddmm; });
+    if (!pool.length) {
+      pool = [];
+      doMomento.forEach(function(x){
+        var dn = norm(x.d);
+        if (dn === 'todos' || dn === '') pool.push(x);
+        else if (dn === diaSem) { pool.push(x); pool.push(x); pool.push(x); }
+      });
+    }
+    var ultima = guarda('pontoUltimaFrase_' + momento);
+    var semRepetir = pool.filter(function(x){ return x.f !== ultima; });
+    if (semRepetir.length) pool = semRepetir;
+    var txt = pool.length ? pool[Math.floor(Math.random() * pool.length)].f : (PADRAO[momento] || '');
+    guarda('pontoUltimaFrase_' + momento, txt);
+    return txt;
+  }
+
+  function esc(t) { return String(t).replace(/[&<>"]/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]; }); }
+
+  function mostrarFrase(acao, hora, offline) {
+    var v = VISUAL[acao]; if (!v) return;
+    var momento = v.mom;
+    var min = minutosHoje();
+    if (acao === 'saida' && estado && min >= (estado.diaLongo || 10) * 60) momento = 'dialongo';
+    var frase = esc(sortearFrase(momento))
+      .replace(/\{nome\}/gi, esc((estado && estado.apelido) || ''))
+      .replace(/\{horas\}/gi, '<b>' + hm(min) + '</b>');
+    $('fIc').textContent = v.ic; $('fIc').style.background = v.bg;
+    $('fTit').textContent = v.tit; $('fTit').style.color = v.cor;
+    $('fHora').textContent = hora || '';
+    $('fFrase').innerHTML = frase;
+    var desp = '';
+    if (acao === 'saida' && !/at[eé]\s+(amanh|logo|segunda|mais)|nos vemos/i.test(frase)) desp = esc(sortearFrase('despedida'));
+    $('fDesp').innerHTML = desp; $('fDesp').style.display = desp ? 'block' : 'none';
+    $('fNota').style.display = offline ? 'block' : 'none';
+    $('ov').className = 'ov mostra';
+    clearTimeout(timerFrase); timerFrase = setTimeout(fecharFrase, offline ? 8000 : 6000);
+  }
+  function fecharFrase() { clearTimeout(timerFrase); $('ov').className = 'ov'; }
+
+  /* ---------- Registro com ou sem internet ---------- */
+  var FILA_KEY = 'pontoFila';
+  var fila = [];
+  try { fila = JSON.parse(guarda(FILA_KEY) || '[]') || []; } catch (e) { fila = []; }
+  var sincronizando = false;
+
+  function salvaFila() { guarda(FILA_KEY, JSON.stringify(fila)); mostraFila(); }
+  function mostraFila() {
+    var f = $('fila');
+    if (!fila.length) { f.style.display = 'none'; return; }
+    f.style.display = 'block';
+    f.innerHTML = '📶 <b>' + fila.length + (fila.length > 1 ? ' registros guardados' : ' registro guardado') +
+      '</b> no celular. Vão para a planilha sozinhos quando a internet voltar.';
+  }
+  function hojeIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+  }
+  function horaAgora() { var d = new Date(); return ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2); }
+  function erroDeRede(e) {
+    return !navigator.onLine || /network|http 0|conex|failed to fetch|timeout/i.test(String(e && (e.message || e)));
+  }
+
+  /** Atualiza a tela na hora, mesmo sem internet. */
+  function aplicarLocal(e, it) {
+    if (!e || it.data !== e.hoje) return;
+    var ab = e.hojeRegs.filter(function(r){ return r.entrada && !r.saida; }).pop();
+    if (it.acao === 'entrada' && !ab) {
+      e.hojeRegs.push({ data: it.data, entrada: it.hora, saidaAlmoco: '', voltaAlmoco: '', saida: '', obs: '' });
+    } else if (ab) {
+      if (it.acao === 'almoco') ab.saidaAlmoco = it.hora;
+      if (it.acao === 'volta') ab.voltaAlmoco = it.hora;
+      if (it.acao === 'saida') ab.saida = it.hora;
+    }
+    e.aberto = e.hojeRegs.filter(function(r){ return r.entrada && !r.saida; }).pop() || null;
+  }
+  function renderComFila(e) { fila.forEach(function(it){ aplicarLocal(e, it); }); render(e); mostraFila(); }
+
+  function carregar() {
+    google.script.run.withSuccessHandler(function(e){ renderComFila(e); sincronizar(); })
+      .withFailureHandler(function(err){ if (!erroDeRede(err)) falha(err); else mostraFila(); }).getEstado();
+  }
+
+  var MSG = { entrada: function(h){ return 'Entrada marcada às ' + h + ' ✅'; },
+              almoco:  function(h){ return 'Bom almoço! Saída às ' + h + ' 🍽️'; },
+              volta:   function(h){ return 'Volta do almoço às ' + h + ' ✅'; },
+              saida:   function(h){ return 'Saída marcada às ' + h + '. Bom descanso! 🏠'; } };
+
+  function guardarOffline(acao, hora, data) {
+    var it = { acao: acao, data: data || hojeIso(), hora: hora || horaAgora() };
+    fila.push(it); salvaFila();
+    aplicarLocal(estado, it); if (estado) render(estado);
+    mostrarFrase(acao, it.hora, true);
+  }
+
+  function marcar(acao) {
+    // Sem internet, ou já há registros esperando: guarda na fila para manter a ordem.
+    if (!navigator.onLine || fila.length) { guardarOffline(acao); sincronizar(); return; }
+    var hora = horaAgora(), data = hojeIso();
+    carregando(true);
+    google.script.run.withSuccessHandler(function(e){
+      carregando(false); render(e);
+      var r = e.hojeRegs[e.hojeRegs.length - 1] || {};
+      var h = { entrada: r.entrada, almoco: r.saidaAlmoco, volta: r.voltaAlmoco, saida: r.saida }[acao];
+      mostrarFrase(acao, h, false);
+    }).withFailureHandler(function(err){
+      carregando(false);
+      if (erroDeRede(err)) guardarOffline(acao, hora, data); else falha(err);
+    }).registrar(acao);
+  }
+
+  function sincronizar() {
+    if (!fila.length || sincronizando || !navigator.onLine) return;
+    sincronizando = true;
+    var enviando = fila.slice();
+    google.script.run.withSuccessHandler(function(e){
+      sincronizando = false;
+      fila = fila.slice(enviando.length); salvaFila();
+      renderComFila(e);
+      if (e.erros && e.erros.length) toast('Alguns registros precisam de correção: ' + e.erros.join(' | '), true);
+      else toast('Registros sem internet enviados para a planilha ✅');
+    }).withFailureHandler(function(err){
+      sincronizando = false;
+      if (!erroDeRede(err)) falha(err);
+    }).sincronizar(enviando);
+  }
+
+  /* ---------- Corrigir / excluir ---------- */
+  function limpa(id) { $(id).value = ''; }
+
+  function abrirCorrecao(iso) {
+    $('cData').value = iso; $('detCorrigir').open = true; carregarDia();
+    $('detCorrigir').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function carregarDia() {
+    var iso = $('cData').value; resetExcluir();
+    if (!iso) return;
+    google.script.run.withSuccessHandler(function(r){
+      $('cEntrada').value = r ? r.entrada : '';
+      $('cSaiAlm').value = r ? r.saidaAlmoco : '';
+      $('cVolAlm').value = r ? r.voltaAlmoco : '';
+      $('cSaida').value = r ? r.saida : '';
+      $('cObs').value = r ? r.obs : '';
+    }).withFailureHandler(falha).getDia(iso);
+  }
+
+  function salvarCorrecao() {
+    carregando(true);
+    google.script.run.withSuccessHandler(function(e){
+      carregando(false); render(e); toast('Horário salvo ✅'); $('detCorrigir').open = false;
+    }).withFailureHandler(falha).corrigir($('cData').value, $('cEntrada').value, $('cSaiAlm').value,
+                                          $('cVolAlm').value, $('cSaida').value, $('cObs').value);
+  }
+
+  var timerExcluir = null;
+  function resetExcluir() {
+    clearTimeout(timerExcluir); var b = $('btnExcluir');
+    b.className = 'btnExcluir'; b.textContent = '🗑️ Excluir o dia inteiro';
+  }
+  function excluir() {
+    var b = $('btnExcluir'), iso = $('cData').value;
+    if (!iso) return toast('Escolha o dia.', true);
+    if (b.className.indexOf('confirmar') < 0) {
+      b.className = 'btnExcluir confirmar';
+      b.textContent = 'Toque de novo para excluir ' + br(iso);
+      timerExcluir = setTimeout(resetExcluir, 5000);
+      return;
+    }
+    resetExcluir(); carregando(true);
+    google.script.run.withSuccessHandler(function(e){
+      carregando(false); render(e); toast('Dia ' + br(iso) + ' excluído 🗑️');
+      ['cEntrada','cSaiAlm','cVolAlm','cSaida','cObs'].forEach(limpa); $('detCorrigir').open = false;
+    }).withFailureHandler(falha).excluirDia(iso);
+  }
+
+  /* ---------- Resumo e PDF ---------- */
+  function calcular() {
+    if (!$('rIni').value || !$('rFim').value) return toast('Escolha as duas datas.', true);
+    carregando(true); $('linkPdf').innerHTML = '';
+    google.script.run.withSuccessHandler(function(r){
+      carregando(false);
+      $('resTot').innerHTML = 'Dias trabalhados: <b>' + r.dias + '</b><br>Total de horas: <b>' + r.totalHM +
+        '</b><br>Valor da hora: ' + brl(r.valorHora) + '<br>A receber: <span class="v">' + brl(r.valor) + '</span>';
+      $('btnPdf').style.display = r.dias ? 'block' : 'none';
+      $('btnPrev').style.display = r.dias ? 'block' : 'none';
+    }).withFailureHandler(falha).resumo($('rIni').value, $('rFim').value);
+  }
+
+  function pdf() {
+    carregando(true);
+    google.script.run.withSuccessHandler(function(r){
+      carregando(false);
+      $('linkPdf').innerHTML = '<a class="pdf" href="' + r.url + '" target="_blank">📄 Abrir ' + r.nome + '</a>';
+    }).withFailureHandler(falha).gerarPdf($('rIni').value, $('rFim').value);
+  }
+
+  function previa() {
+    carregando(true);
+    google.script.run.withSuccessHandler(function(html){
+      carregando(false);
+      var corpo = (html.match(/<body[^>]*>([\s\S]*)<\/body>/i) || [null, html])[1];
+      $('pvConteudo').innerHTML = corpo;
+      $('pv').className = 'pv mostra';
+      pvZoom = false; ajustarPrevia();
+    }).withFailureHandler(falha).previaDemonstrativo($('rIni').value, $('rFim').value);
+  }
+  var pvZoom = false;
+  function zoomPrevia() { pvZoom = !pvZoom; ajustarPrevia(); }
+  function ajustarPrevia() {
+    var c = $('pvConteudo'), largura = pvZoom ? 760 : Math.min(760, $('pv').clientWidth - 24), esc = largura / 760;
+    c.style.transform = 'scale(' + esc + ')';
+    $('pvFolha').style.width = largura + 'px';
+    $('pvFolha').style.height = Math.ceil(c.offsetHeight * esc) + 'px';
+  }
+  function fecharPrevia() { $('pv').className = 'pv'; }
+  window.addEventListener('resize', function(){ if ($('pv').className.indexOf('mostra') >= 0) ajustarPrevia(); });
+
+  /* ---------- Instalação (PWA) ---------- */
+  var pedidoInstalar = null;
+  function instalado() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  }
+  window.addEventListener('beforeinstallprompt', function(ev) {
+    ev.preventDefault(); pedidoInstalar = ev;
+    if (instalado() || guarda('pontoInstalado') === 'sim') return;
+    $('passosInstalar').innerHTML = '<p style="margin:4px 0 10px">Instale o app para abrir direto pelo ícone, mesmo sem internet.</p>';
+    $('btnInstalar').style.display = 'inline-block'; $('btnJaFiz').style.display = 'none';
+    $('instalar').style.display = 'block';
+  });
+  window.addEventListener('appinstalled', function() { guarda('pontoInstalado', 'sim'); $('instalar').style.display = 'none'; });
+  function instalarAgora() {
+    if (!pedidoInstalar) return mostrarInstalar(true);
+    pedidoInstalar.prompt();
+    pedidoInstalar.userChoice.then(function(r) {
+      if (r.outcome === 'accepted') { guarda('pontoInstalado', 'sim'); $('instalar').style.display = 'none'; }
+      pedidoInstalar = null;
+    });
+  }
+  function mostrarInstalar(forcar) {
+    if (instalado()) { if (forcar) toast('O app já está instalado ✅'); return; }
+    if (!forcar && guarda('pontoInstalado') === 'sim') return;
+    if (pedidoInstalar) { $('btnInstalar').style.display = 'inline-block'; $('btnJaFiz').style.display = 'none'; $('instalar').style.display = 'block'; return; }
+    if (!forcar) return;   // espera o Chrome oferecer a instalação
+    var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    $('passosInstalar').innerHTML = ios
+      ? '<ol><li>Abra este link no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (quadrado com seta ⬆️).</li>' +
+        '<li>Toque em <b>Adicionar à Tela de Início</b>.</li></ol>'
+      : '<ol><li>No Chrome, toque nos <b>3 pontinhos ⋮</b> lá em cima.</li>' +
+        '<li>Toque em <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>).</li></ol>';
+    $('btnInstalar').style.display = 'none'; $('btnJaFiz').style.display = 'inline-block';
+    $('instalar').style.display = 'block';
+    $('instalar').scrollIntoView({ behavior: 'smooth' });
+  }
+  function jaInstalei() { guarda('pontoInstalado', 'sim'); $('instalar').style.display = 'none'; }
+
+  if (!window.PONTO_API || !window.PONTO_CHAVE) {
+    $('app').style.display = 'none'; $('semConfig').style.display = 'block';
+  }
+  // Mostra na hora o último estado guardado (funciona sem internet)
+  (function () {
+    var c = null; try { c = JSON.parse(localStorage.getItem('pontoEstado') || 'null'); } catch (e) {}
+    if (!c) return;
+    var hoje = hojeIso();
+    if (c.hoje !== hoje) { c.hoje = hoje; c.hojeRegs = []; c.aberto = null; }
+    renderComFila(c);
+  })();
+  tick(); setInterval(tick, 15000);
+  mostrarInstalar(false);
+  carregar();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+  mostraFila();
+  document.addEventListener('visibilitychange', function(){ if (!document.hidden) carregar(); });
+  window.addEventListener('online', function(){ sincronizar(); carregar(); });
+  setInterval(sincronizar, 30000);
+</script>
+</body>
+</html>

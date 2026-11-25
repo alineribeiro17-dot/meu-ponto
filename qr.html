@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meu Ponto - QR Code de acesso</title>
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<style>
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #FCF3EA; color: #3A2A30; text-align: center; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 32px 20px; }
+  h1 { color: #CF4173; font-size: 28px; margin: 0 0 8px; }
+  p { font-size: 18px; line-height: 1.5; margin: 8px 0; }
+  .qr { background: #fff; display: inline-block; padding: 18px; border-radius: 18px; margin: 18px 0;
+        box-shadow: 0 2px 12px rgba(0,0,0,.08); border: 3px solid #CF4173; }
+  .qr svg { display: block; width: 300px; height: 300px; }
+  .aviso { background: #FBE9D4; color: #7A4A12; border-radius: 12px; padding: 12px; font-size: 15px; margin-top: 16px; }
+  .erro { background: #FBE4EC; color: #A8325D; border-radius: 12px; padding: 14px; font-size: 17px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Meu Ponto</h1>
+  <div id="conteudo"></div>
+</div>
+<script src="qrcode.js"></script>
+<script>
+  (function () {
+    var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+    var chave = h.get('c'), api = h.get('a');
+    var el = document.getElementById('conteudo');
+    if (!chave) {
+      el.innerHTML = '<div class="erro">Abra esta página pelo link completo do QR Code (com a chave no final).</div>';
+      return;
+    }
+    var base = location.href.split('#')[0].replace(/qr\.html.*$/, '');
+    var link = base + '#c=' + encodeURIComponent(chave) + (api ? '&a=' + encodeURIComponent(api) : '');
+    var qr = qrcode(0, 'M'); qr.addData(link); qr.make();
+    el.innerHTML = '<p><b>Aponte a câmera do celular para o código</b><br>e toque no link que aparecer.</p>' +
+      '<div class="qr">' + qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true }) + '</div>' +
+      '<p>O app abre já ligado à planilha.<br>Depois é só tocar em <b>“Instalar o Meu Ponto”</b>.</p>' +
+      '<div class="aviso">🔒 Este código dá acesso aos registros. Mostre só para quem vai usar o app e feche esta página depois.</div>';
+  })();
+</script>
+</body>
+</html>
