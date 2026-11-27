@@ -110,6 +110,7 @@
   .cfg .msg.ok { display: block; background: #E4F1EA; color: #2D6B4F; }
   .cfg .msg.info { display: block; background: #FBE9D4; color: #7A4A12; }
   .avancado { margin-top: 18px; }
+  .convite { background: #fff; border: 2px solid #CF4173; border-radius: 16px; padding: 14px; margin-bottom: 14px; font-size: 17px; }
   .avancado summary { font-size: 16px; font-weight: bold; color: #7A6A70; cursor: pointer; padding: 8px 2px; }
   .btnSec { width: 100%; margin-top: 10px; padding: 12px; font-size: 16px; border: 2px solid #E2CFD5; border-radius: 12px;
             background: #fff; color: #5D3140; font-weight: bold; cursor: pointer; }
@@ -150,6 +151,14 @@
   <button class="btn laranja" id="btnAlmoco" onclick="marcar('almoco')">🍽️ Fui almoçar</button>
   <button class="btn laranja" id="btnVolta" onclick="marcar('volta')">↩️ Voltei do almoço</button>
   <button class="btn vermelho" id="btnSaida" onclick="marcar('saida')">🏠 Fui embora</button>
+
+  <div class="convite" id="conviteAvisos" style="display:none">
+    <b>🔔 Quer ser avisada se esquecer o ponto?</b>
+    <div class="linha2" style="margin-top:10px">
+      <div><button class="btn2" style="margin-top:0" onclick="ativarAvisos()">Ativar avisos</button></div>
+      <div><button class="btnSec" style="margin-top:0" onclick="dispensarConvite()">Agora não</button></div>
+    </div>
+  </div>
 
   <div class="meudia">
     <h2>Meu dia</h2>
@@ -247,6 +256,14 @@
       <button class="btn2" onclick="salvarPerfil()">Salvar</button>
     </div>
 
+    <div class="card" id="cardAvisos">
+      <h3>🔔 Avisos de ponto esquecido</h3>
+      <div class="dica" style="font-size:15px">O celular avisa se você esquecer de registrar a entrada, a saída ou a volta do almoço.</div>
+      <div id="avisosStatus" style="font-size:16px;margin-top:10px"></div>
+      <button class="btn2" id="btnAtivarAvisos" onclick="ativarAvisos()">🔔 Ativar avisos</button>
+      <button class="btnSec" id="btnTestarAviso" onclick="testarAvisoApp()" style="display:none">Enviar um aviso de teste</button>
+    </div>
+
     <details id="detAvancado" class="avancado">
       <summary>🔧 Opções avançadas</summary>
       <div class="dica" style="margin:6px 0 4px">Só para configurar o app. No dia a dia, não é preciso mexer aqui.</div>
@@ -295,6 +312,7 @@
         .then(function (r) { if (!r.ok) throw new Error('NetworkError: HTTP ' + r.status); return r.json(); })
         .then(function (j) { if (!j.ok) throw new Error(j.erro || 'Erro na planilha.'); return j.dados; });
     }
+    window.pontoApi = chamar;
     var NOMES = { getEstado: 'estado' };
     // Mesmo formato do Apps Script: google.script.run.withSuccessHandler(f).withFailureHandler(g).acao(...)
     window.google = { script: { run: new Proxy({}, { get: function (_, k0) {
@@ -404,7 +422,8 @@
     } else {
       var feito = e.hojeRegs.filter(function(r){ return r.saida; }).pop();
       st.className = 'status off';
-      st.textContent = feito ? 'Dia encerrado às ' + feito.saida + ' 👏' : 'Entrada de hoje ainda não marcada';
+      st.textContent = feito ? 'Dia encerrado às ' + feito.saida + ' 👏'
+        : (e.semTrabalhoHoje ? 'Hoje marcado como sem trabalho 😊' : 'Entrada de hoje ainda não marcada');
     }
     mostra('btnEntrada', !ab);
     mostra('btnAlmoco', ab && !ab.saidaAlmoco);
@@ -424,6 +443,7 @@
              r.voltaAlmoco + ' (' + r.almoco + ')</div>' : '') + '</div>';
     }).join('') : 'Nenhum registro ainda.';
 
+    if (typeof atualizarAvisosUI === 'function') atualizarAvisosUI();
     if (!$('cData').value) $('cData').value = e.hoje;
     if (!$('rFim').value) { $('rFim').value = e.hoje; $('rIni').value = isoMenos(e.hoje, 14); }
     tick();
@@ -444,6 +464,7 @@
     if (motivo === 'chave') msgConfig('erro', '🔑 A chave salva neste celular não confere com a da planilha. Cole a chave correta abaixo, em "Opções avançadas → Ligação com a planilha".');
     else if (motivo === 'perfil') msgConfig('info', '👋 Bem-vinda! Conte como você quer ser chamada e o seu nome completo.');
     else $('cfgMsg').className = 'msg';
+    atualizarAvisosUI();
     $('cfg').className = 'cfg mostra';
   }
   function fecharConfig() { $('cfg').className = 'cfg'; }
@@ -455,7 +476,7 @@
     $('semConfig').style.display = 'none'; $('app').style.display = 'block';
     carregando(true);
     google.script.run.withSuccessHandler(function(e){
-      carregando(false); renderComFila(e); fecharConfig(); toast('Celular ligado à planilha ✅');
+      carregando(false); renderComFila(e); fecharConfig(); guardarCfgParaAvisos(); toast('Celular ligado à planilha ✅');
     }).withFailureHandler(function(err){
       carregando(false);
       if (chaveInvalida(err)) abrirConfig('chave'); else falha(err);
@@ -482,6 +503,69 @@
       if (erroDeRede(err)) msgConfig('erro', 'Sem internet agora. Tente de novo quando a conexão voltar.');
       else if (chaveInvalida(err)) abrirConfig('chave'); else falha(err);
     }).salvarPerfil(ap, nm);
+  }
+
+
+  /* ---------- Avisos (notificações push) ---------- */
+  function pushSuportado() { return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+  function b64uParaBytes(t) {
+    var b = atob(t.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((t.length + 3) % 4));
+    var a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a;
+  }
+  function guardarCfgParaAvisos() {   // o "ajudante" (service worker) precisa da chave para buscar o texto do aviso
+    if (!('caches' in window) || !window.PONTO_CHAVE) return;
+    caches.open('meu-ponto-cfg').then(function(c) {
+      c.put('./__cfg', new Response(JSON.stringify({ api: window.PONTO_API, chave: window.PONTO_CHAVE })));
+    }).catch(function () {});
+  }
+  function avisosAtivos() { return guarda('pontoAvisos') === 'sim' && pushSuportado() && Notification.permission === 'granted'; }
+  function atualizarAvisosUI() {
+    var st = $('avisosStatus'); if (!st) return;
+    if (!pushSuportado()) {
+      st.textContent = 'Este navegador não aceita avisos. Use o Chrome.'; $('btnAtivarAvisos').style.display = 'none'; return;
+    }
+    if (Notification.permission === 'denied') {
+      st.innerHTML = '🚫 Os avisos foram bloqueados. Para liberar: toque e segure o ícone do app → <b>Informações do app</b> → <b>Notificações</b> → ativar.';
+      $('btnAtivarAvisos').style.display = 'none'; $('btnTestarAviso').style.display = 'none'; return;
+    }
+    var on = avisosAtivos();
+    st.innerHTML = on ? '✅ <b>Avisos ativados</b> neste celular.' : 'Os avisos estão desligados neste celular.';
+    $('btnAtivarAvisos').style.display = on ? 'none' : 'block';
+    $('btnTestarAviso').style.display = on ? 'block' : 'none';
+    var convite = !on && guarda('pontoConviteAvisos') !== 'nao' && window.PONTO_CHAVE && estado && estado.apelido;
+    $('conviteAvisos').style.display = convite ? 'block' : 'none';
+  }
+  function dispensarConvite() { guarda('pontoConviteAvisos', 'nao'); atualizarAvisosUI(); }
+
+  function ativarAvisos() {
+    if (!pushSuportado()) return toast('Este navegador não aceita avisos. Use o Chrome.', true);
+    carregando(true);
+    Notification.requestPermission().then(function (perm) {
+      if (perm !== 'granted') throw new Error('Sem permissão para avisos. Toque em "Permitir" quando o celular perguntar.');
+      return Promise.all([navigator.serviceWorker.ready, window.pontoApi('chavePublicaPush', [])]);
+    }).then(function (r) {
+      var reg = r[0], chave = r[1];
+      return reg.pushManager.getSubscription().then(function (antiga) {
+        return antiga ? antiga.unsubscribe() : null;
+      }).then(function () {
+        return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uParaBytes(chave) });
+      });
+    }).then(function (insc) {
+      return window.pontoApi('inscreverPush', [insc.toJSON()]);
+    }).then(function () {
+      carregando(false); guarda('pontoAvisos', 'sim'); guardarCfgParaAvisos(); atualizarAvisosUI();
+      toast('Avisos ativados ✅');
+    }).catch(function (e) {
+      carregando(false); atualizarAvisosUI();
+      toast(erroDeRede(e) ? 'Sem internet agora. Tente de novo com conexão.' : String(e.message || e).replace(/^Error:\s*/, ''), true);
+    });
+  }
+  function testarAvisoApp() {
+    guardarCfgParaAvisos();
+    window.pontoApi('testarAviso', []).then(function (n) {
+      toast(n ? 'Aviso de teste enviado! Deve chegar em alguns segundos 🔔' : 'Nenhum celular recebeu. Toque em "Ativar avisos" de novo.', !n);
+      if (!n) { guarda('pontoAvisos', 'nao'); atualizarAvisosUI(); }
+    }).catch(falha);
   }
 
   /* ---------- Frases ---------- */
@@ -816,6 +900,7 @@
   mostrarInstalar(false);
   carregar();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function () {});
+  guardarCfgParaAvisos();
   mostraFila();
   document.addEventListener('visibilitychange', function(){ if (!document.hidden) carregar(); });
   window.addEventListener('online', function(){ sincronizar(); carregar(); });
