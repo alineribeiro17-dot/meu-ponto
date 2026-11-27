@@ -96,13 +96,31 @@
   .vazio { color: #8E7D83; font-size: 15px; }
   .rodape { text-align: center; margin-top: 22px; }
   .rodape a { color: #7A6A70; font-size: 14px; }
+  .topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .engrenagem { border: 0; background: #fff; border-radius: 50%; width: 44px; height: 44px; font-size: 22px;
+                box-shadow: 0 1px 3px rgba(0,0,0,.08); cursor: pointer; flex: none; }
+  .cfg { position: fixed; inset: 0; background: #FCF3EA; z-index: 12; display: none; overflow: auto; }
+  .cfg.mostra { display: block; }
+  .cfg .wrap h2 { font-size: 22px; color: #CF4173; margin: 4px 0 12px; }
+  .cfg .card h3 { font-size: 17px; margin: 0 0 6px; color: #5D3140; }
+  .cfg .msg { border-radius: 12px; padding: 12px; font-size: 15px; margin-bottom: 12px; display: none; }
+  .cfg .msg.erro { display: block; background: #FBE4EC; color: #A8325D; }
+  .cfg .msg.ok { display: block; background: #E4F1EA; color: #2D6B4F; }
+  .cfg .msg.info { display: block; background: #FBE9D4; color: #7A4A12; }
+  .btnSec { width: 100%; margin-top: 10px; padding: 12px; font-size: 16px; border: 2px solid #E2CFD5; border-radius: 12px;
+            background: #fff; color: #5D3140; font-weight: bold; cursor: pointer; }
 </style>
 </head>
 <body>
 <div class="wrap" id="semConfig" style="display:none">
   <h1>Meu Ponto</h1>
   <div class="aviso" style="margin-top:16px">🔑 Este aparelho ainda não está ligado à planilha.<br><br>
-  Abra o app pelo <b>link completo</b> que você recebeu (ele já traz a chave de acesso).</div>
+  Abra o app pelo <b>link completo</b> ou pelo <b>QR Code</b> que você recebeu. Ou cole a chave de acesso aqui embaixo.</div>
+  <div class="card">
+    <label>Chave de acesso</label>
+    <input type="text" id="chaveInicial" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Ex.: a1b2c3d4e5f6">
+    <button class="btn2" onclick="salvarChave($('chaveInicial').value)">Ligar à planilha</button>
+  </div>
 </div>
 <div class="wrap" id="app">
 
@@ -113,8 +131,11 @@
     <button id="btnJaFiz" onclick="jaInstalei()">Pronto, já fiz</button>
   </div>
 
-  <h1 id="ola">Olá!</h1>
-  <div class="data" id="dataHoje"></div>
+  <div class="topo">
+    <div><h1 id="ola">Olá!</h1>
+    <div class="data" id="dataHoje"></div></div>
+    <button class="engrenagem" onclick="abrirConfig()" aria-label="Configurações">⚙️</button>
+  </div>
   <div class="relogio" id="relogio">--:--</div>
   <div class="status off" id="status">Carregando...</div>
 
@@ -181,7 +202,8 @@
     </details>
   </div>
 
-  <div class="rodape"><a href="#" onclick="mostrarInstalar(true); return false;">📲 Como colocar na tela do celular</a></div>
+  <div class="rodape"><a href="#" onclick="abrirConfig(); return false;">⚙️ Configurações</a> &nbsp;·&nbsp;
+    <a href="#" onclick="mostrarInstalar(true); return false;">📲 Como colocar na tela do celular</a></div>
 </div>
 
 <div class="ov" id="ov" onclick="fecharFrase()">
@@ -203,6 +225,33 @@
   </div>
   <div class="dica" style="text-align:center;margin:6px 0 0">Toque na folha para ampliar ou reduzir</div>
   <div class="area"><div class="folha" id="pvFolha" onclick="zoomPrevia()"><div id="pvConteudo"></div></div></div>
+</div>
+<div class="cfg" id="cfg">
+  <div class="wrap">
+    <div class="topo"><h2>⚙️ Configurações</h2>
+      <button class="engrenagem" onclick="fecharConfig()" aria-label="Fechar">✕</button></div>
+    <div class="msg" id="cfgMsg"></div>
+
+    <div class="card">
+      <h3>Seus dados</h3>
+      <label>Como você quer ser chamada? (apelido)</label>
+      <input type="text" id="cfgApelido" maxlength="30" placeholder="Ex.: Cláudia">
+      <div class="dica">Aparece na saudação e no nome do PDF.</div>
+      <label>Nome completo</label>
+      <input type="text" id="cfgNome" maxlength="80" placeholder="Ex.: Cláudia Ribeiro da Silva">
+      <div class="dica">Aparece no demonstrativo em PDF.</div>
+      <button class="btn2" onclick="salvarPerfil()">Salvar</button>
+    </div>
+
+    <div class="card">
+      <h3>Ligação com a planilha</h3>
+      <div id="cfgStatus" class="dica" style="font-size:15px"></div>
+      <label>Chave de acesso</label>
+      <input type="text" id="cfgChave" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Cole aqui a chave">
+      <div class="dica">Só mude se pedirem. A chave fica na aba Config da planilha, na linha "Chave do app".</div>
+      <button class="btnSec" onclick="salvarChave($('cfgChave').value)">Salvar chave</button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast"></div>
 <div class="carregando" id="carregando">Aguarde...</div>
@@ -364,6 +413,49 @@
   }
 
 
+
+  /* ---------- Configurações ---------- */
+  function chaveInvalida(err) { return /chave inv[aá]lida/i.test(String(err && (err.message || err))); }
+  function msgConfig(tipo, txt) { var m = $('cfgMsg'); m.className = 'msg ' + tipo; m.innerHTML = txt; }
+  function abrirConfig(motivo) {
+    $('cfgApelido').value = (estado && estado.apelido) || '';
+    $('cfgNome').value = (estado && estado.nomeCompleto) || '';
+    var ch = window.PONTO_CHAVE || '';
+    $('cfgChave').value = '';
+    $('cfgStatus').textContent = ch ? 'Chave salva neste celular: ••••••' + ch.slice(-4) : 'Nenhuma chave salva neste celular.';
+    if (motivo === 'chave') msgConfig('erro', '🔑 A chave salva neste celular não confere com a da planilha. Cole a chave correta abaixo, em "Ligação com a planilha".');
+    else if (motivo === 'perfil') msgConfig('info', '👋 Bem-vinda! Conte como você quer ser chamada e o seu nome completo.');
+    else $('cfgMsg').className = 'msg';
+    $('cfg').className = 'cfg mostra';
+  }
+  function fecharConfig() { $('cfg').className = 'cfg'; }
+  function salvarChave(v) {
+    v = String(v || '').trim();
+    if (!v) return toast('Cole a chave de acesso.', true);
+    try { localStorage.setItem('pontoChave', v); localStorage.removeItem('pontoEstado'); } catch (e) {}
+    window.PONTO_CHAVE = v;
+    $('semConfig').style.display = 'none'; $('app').style.display = 'block';
+    carregando(true);
+    google.script.run.withSuccessHandler(function(e){
+      carregando(false); renderComFila(e); fecharConfig(); toast('Celular ligado à planilha ✅');
+    }).withFailureHandler(function(err){
+      carregando(false);
+      if (chaveInvalida(err)) abrirConfig('chave'); else falha(err);
+    }).getEstado();
+  }
+  function salvarPerfil() {
+    var ap = $('cfgApelido').value.trim(), nm = $('cfgNome').value.trim();
+    if (!ap) return msgConfig('erro', 'Escreva como você quer ser chamada.');
+    carregando(true);
+    google.script.run.withSuccessHandler(function(e){
+      carregando(false); renderComFila(e); msgConfig('ok', 'Dados salvos ✅'); setTimeout(fecharConfig, 900);
+    }).withFailureHandler(function(err){
+      carregando(false);
+      if (erroDeRede(err)) msgConfig('erro', 'Sem internet agora. Tente de novo quando a conexão voltar.');
+      else if (chaveInvalida(err)) abrirConfig('chave'); else falha(err);
+    }).salvarPerfil(ap, nm);
+  }
+
   /* ---------- Frases ---------- */
   var VISUAL = {
     entrada: { ic: '☀️', tit: 'Entrada registrada', cor: '#2D6B4F', bg: '#E4F1EA', mom: 'entrada' },
@@ -466,9 +558,16 @@
   }
   function renderComFila(e) { fila.forEach(function(it){ aplicarLocal(e, it); }); render(e); mostraFila(); }
 
+  var perfilPedido = false;
   function carregar() {
-    google.script.run.withSuccessHandler(function(e){ renderComFila(e); sincronizar(); })
-      .withFailureHandler(function(err){ if (!erroDeRede(err)) falha(err); else mostraFila(); }).getEstado();
+    if (!window.PONTO_CHAVE) return;
+    google.script.run.withSuccessHandler(function(e){
+      renderComFila(e); sincronizar();
+      if (!e.apelido && !perfilPedido) { perfilPedido = true; abrirConfig('perfil'); }
+    }).withFailureHandler(function(err){
+      if (chaveInvalida(err)) { $('status').textContent = 'Celular não ligado à planilha'; abrirConfig('chave'); }
+      else if (!erroDeRede(err)) falha(err); else mostraFila();
+    }).getEstado();
   }
 
   var MSG = { entrada: function(h){ return 'Entrada marcada às ' + h + ' ✅'; },
