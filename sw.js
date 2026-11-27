@@ -1,5 +1,5 @@
 /* Meu Ponto - service worker: guarda a tela no celular para abrir sem internet. */
-const VERSAO = 'meu-ponto-v8';
+const VERSAO = 'meu-ponto-v9';
 const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './config.js', './qrcode.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/favicon-64.png', './icons/badge-96.png'];
 
@@ -42,7 +42,8 @@ const ICONE = './icons/icon-192.png', SELO = './icons/badge-96.png';
 const BOTOES = {
   entrada: [{ action: 'registrar', title: '☀️ Registrar agora' }, { action: 'folga', title: 'Não fui trabalhar hoje' }],
   almoco:  [{ action: 'registrar', title: '↩️ Registrar volta' }, { action: 'abrir', title: 'Abrir o app' }],
-  saida:   [{ action: 'registrar', title: '🏠 Registrar saída' }, { action: 'abrir', title: 'Abrir o app' }]
+  saida:   [{ action: 'registrar', title: '🏠 Registrar saída' }, { action: 'abrir', title: 'Abrir o app' }],
+  diaTodo: [{ action: 'abrir', title: '✏️ Registrar o dia' }, { action: 'folga', title: 'Não trabalhei hoje' }]
 };
 const ACAO_PONTO = { entrada: 'entrada', almoco: 'volta', saida: 'saida' };
 

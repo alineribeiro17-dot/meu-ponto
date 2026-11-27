@@ -276,12 +276,18 @@
     </details>
   </div>
 </div>
-<div class="ov" id="popAlerta">
+<div class="ov" id="popAlerta" style="overflow:auto">
   <div class="fcard">
     <div class="fic" id="paIc"></div>
     <div class="ftit" id="paTit"></div>
     <div class="ffrase" id="paTxt" style="margin-top:10px"></div>
     <button class="btn" id="paSim" style="display:block;margin-bottom:10px"></button>
+    <button class="btnSec" id="paCedo" style="margin-top:0;margin-bottom:10px"></button>
+    <div id="paAjuste" style="display:none;margin-bottom:12px">
+      <label id="paHoraLbl" style="text-align:left"></label>
+      <input type="text" class="hora" inputmode="numeric" maxlength="5" placeholder="00:00" autocomplete="off" id="paHora">
+      <button class="btn2" id="paSalvarHora" style="margin-top:10px">Salvar horário</button>
+    </div>
     <button class="btnSec" id="paNao" style="margin-top:0"></button>
     <div class="dica" id="paDica" style="margin-top:10px"></div>
   </div>
@@ -606,21 +612,27 @@
 
   /* ---------- Pop-up de ponto esquecido (com o app aberto) ---------- */
   var POP = {
-    entrada: { ic: '⏰', tit: 'O registro de entrada ainda não foi feito', txt: 'Você já começou a trabalhar hoje?',
-               sim: '☀️ Registrar agora', nao: 'Não fui trabalhar hoje', acao: 'entrada',
-               dica: 'Chegou mais cedo? Registre agora e depois corrija o horário em "Corrigir ou excluir horário".' },
-    almoco:  { ic: '🍽️', tit: 'A volta do almoço ainda não foi registrada', txt: 'Você já voltou do almoço?',
-               sim: '↩️ Registrar volta agora', nao: 'Ainda estou no almoço', acao: 'volta', dica: '' },
-    saida:   { ic: '🏠', tit: 'O registro de saída ainda não foi feito', txt: 'Você já terminou o trabalho de hoje?',
-               sim: '🏠 Registrar saída agora', nao: 'Ainda estou trabalhando', acao: 'saida',
-               dica: 'Saiu mais cedo? Registre agora e depois corrija o horário.' }
+    entrada: { ic: '⏰', tit: 'O registro de entrada ainda não foi feito', momento: 'esqueceuentrada',
+               sim: '☀️ Cheguei agora', cedo: '😅 Cheguei mais cedo e esqueci', nao: 'Não fui trabalhar hoje',
+               acao: 'entrada', lbl: 'Que horas você chegou?' },
+    almoco:  { ic: '🍽️', tit: 'A volta do almoço ainda não foi registrada', momento: 'esqueceualmoco',
+               sim: '↩️ Voltei agora', cedo: '😅 Voltei mais cedo e esqueci', nao: 'Ainda estou no almoço',
+               acao: 'volta', lbl: 'Que horas você voltou?' },
+    saida:   { ic: '🏠', tit: 'O registro de saída ainda não foi feito', momento: 'esqueceusaida',
+               sim: '🏠 Estou saindo agora', cedo: '😅 Saí mais cedo e esqueci', nao: 'Ainda estou trabalhando',
+               acao: 'saida', lbl: 'Que horas você saiu?' },
+    diaTodo: { ic: '🤔', tit: 'Nenhum registro de ponto hoje', momento: 'diasemregistro',
+               sim: '✏️ Esqueci! Registrar o dia', cedo: '', nao: 'Não trabalhei hoje', acao: '' }
   };
+  var PADRAO_LEMBRETE = { esqueceuentrada: 'Esqueceu de registrar a entrada? 🤔', esqueceualmoco: 'Ainda no almoço? 🍽️',
+    esqueceusaida: 'Já foi embora? 🏠', diasemregistro: 'Não trabalhou hoje ou esqueceu de registrar o ponto? 🤔' };
   function alertaAgora(e) {
     if (!e || !e.avisosCfg || !e.avisosCfg.ligados || e.semTrabalhoHoje) return null;
     if (guarda('pontoSemTrabalho') === hojeIso()) return null;
     var c = e.avisosCfg, m = agoraMin();
     if (c.dias.indexOf(new Date().getDay()) < 0) return null;
     var regs = e.hojeRegs || [], ab = regs.filter(function (r) { return r.entrada && !r.saida; }).pop();
+    if (!regs.length && m >= c.saida + c.tolerancia) return 'diaTodo';
     if (!regs.length && m >= c.entrada + c.tolerancia && m < c.saida) return 'entrada';
     if (ab && ab.saidaAlmoco && !ab.voltaAlmoco && c.almocoMin > 0 && m - mins(ab.saidaAlmoco) >= c.almocoMin) return 'almoco';
     if (ab && !(ab.saidaAlmoco && !ab.voltaAlmoco) && m >= c.saida + c.tolerancia) return 'saida';
@@ -634,14 +646,46 @@
     var tipo = alertaAgora(estado);
     if (!tipo || guarda('pontoAlertaVisto') === hojeIso() + tipo) return;
     var p = POP[tipo];
+    var frase = sortearFrase(p.momento);
+    if (!frase || frase === PADRAO[p.momento]) frase = PADRAO_LEMBRETE[p.momento];
     $('paIc').textContent = p.ic; $('paIc').style.background = '#FBE4EC';
     $('paTit').textContent = p.tit; $('paTit').style.color = '#CF4173';
-    $('paTxt').textContent = p.txt; $('paDica').textContent = p.dica;
-    $('paSim').textContent = p.sim; $('paSim').className = 'btn ' + (tipo === 'saida' ? 'vermelho' : (tipo === 'entrada' ? 'verde' : 'laranja'));
-    $('paSim').onclick = function () { fecharAlerta(tipo); marcar(p.acao); };
+    $('paTxt').innerHTML = esc(frase).replace(/\{nome\}/gi, esc((estado && estado.apelido) || '')).replace(/\{horas\}/gi, '');
+    $('paDica').textContent = '';
+    $('paSim').textContent = p.sim;
+    $('paSim').className = 'btn ' + (tipo === 'saida' ? 'vermelho' : (tipo === 'almoco' ? 'laranja' : 'verde'));
+    $('paSim').onclick = function () {
+      fecharAlerta(tipo);
+      if (tipo === 'diaTodo') { abrirCorrecao(hojeIso()); setTimeout(function () { $('cEntrada').focus(); }, 400); }
+      else marcar(p.acao);
+    };
+    $('paCedo').style.display = p.cedo ? 'block' : 'none';
+    $('paCedo').textContent = p.cedo;
+    $('paAjuste').style.display = 'none';
+    $('paCedo').onclick = function () {
+      $('paCedo').style.display = 'none'; $('paAjuste').style.display = 'block';
+      $('paHoraLbl').textContent = p.lbl; $('paHora').value = ''; $('paHora').classList.remove('invalida');
+      setTimeout(function () { $('paHora').focus(); }, 100);
+    };
+    $('paSalvarHora').onclick = function () { salvarHoraAjustada(tipo, p.acao); };
     $('paNao').textContent = p.nao;
-    $('paNao').onclick = function () { fecharAlerta(tipo); if (tipo === 'entrada') naoFuiTrabalhar(); };
+    $('paNao').onclick = function () { fecharAlerta(tipo); if (tipo === 'entrada' || tipo === 'diaTodo') naoFuiTrabalhar(); };
     $('popAlerta').className = 'ov mostra';
+  }
+  /** "Cheguei mais cedo e esqueci": registra com o horário que ela digitar. */
+  function salvarHoraAjustada(tipo, acao) {
+    var h = normHora($('paHora').value), agora = horaAgora();
+    var ab = estado && (estado.hojeRegs || []).filter(function (r) { return r.entrada && !r.saida; }).pop();
+    var erro = '';
+    if (!h) erro = 'Digite o horário (ex.: 07:00).';
+    else if (h > agora) erro = 'Esse horário ainda não chegou 😉';
+    else if (acao === 'volta' && ab && h <= ab.saidaAlmoco) erro = 'A volta precisa ser depois da saída para o almoço (' + ab.saidaAlmoco + ').';
+    else if (acao === 'saida' && ab && h <= (ab.voltaAlmoco || ab.entrada)) erro = 'A saída precisa ser depois de ' + (ab.voltaAlmoco || ab.entrada) + '.';
+    if (erro) { $('paHora').classList.add('invalida'); $('paDica').textContent = erro; return; }
+    $('paHora').value = h;
+    fecharAlerta(tipo);
+    guardarLocal(acao, h);
+    sincronizar();
   }
   function fecharAlerta(tipo) { guarda('pontoAlertaVisto', hojeIso() + tipo); $('popAlerta').className = 'ov'; }
   function naoFuiTrabalhar() {
@@ -779,8 +823,8 @@
               saida:   function(h){ return 'Saída marcada às ' + h + '. Bom descanso! 🏠'; } };
 
   /** Registra na hora, no celular, e envia para a planilha em seguida (com ou sem internet). */
-  function guardarLocal(acao) {
-    var it = { acao: acao, data: hojeIso(), hora: horaAgora(), off: !navigator.onLine };
+  function guardarLocal(acao, horaInformada) {
+    var it = { acao: acao, data: hojeIso(), hora: horaInformada || horaAgora(), off: !navigator.onLine };
     fila.push(it); salvaFila();
     aplicarLocal(estado, it); if (estado) render(estado);
     mostrarFrase(acao, it.hora, it.off);
