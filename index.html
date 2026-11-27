@@ -55,6 +55,8 @@
   label { display: block; font-size: 15px; margin: 10px 0 4px; color: #6A5359; }
   input { width: 100%; font-size: 18px; padding: 10px; border: 1px solid #E2CFD5; border-radius: 10px; background: #fff; }
   .campo { display: flex; gap: 6px; }
+  input.hora { font-size: 22px; letter-spacing: 1px; text-align: center; }
+  input.hora.invalida { border-color: #B0303F; background: #FBE4EC; }
   .campo button { border: 1px solid #E2CFD5; background: #fff; border-radius: 10px; font-size: 16px; padding: 0 12px; color: #CF4173; }
   .linha2 { display: flex; gap: 10px; } .linha2 > div { flex: 1; min-width: 0; }
   .btn2 { width: 100%; margin-top: 14px; padding: 14px; font-size: 18px; border: 0; border-radius: 12px;
@@ -171,19 +173,19 @@
       <input type="date" id="cData" onchange="carregarDia()">
       <div class="linha2">
         <div><label>Entrada</label>
-          <div class="campo"><input type="time" id="cEntrada"><button onclick="limpa('cEntrada')">✕</button></div></div>
+          <div class="campo"><input type="text" class="hora" inputmode="numeric" maxlength="5" placeholder="00:00" autocomplete="off" id="cEntrada"><button onclick="limpa('cEntrada')">✕</button></div></div>
         <div><label>Saída</label>
-          <div class="campo"><input type="time" id="cSaida"><button onclick="limpa('cSaida')">✕</button></div></div>
+          <div class="campo"><input type="text" class="hora" inputmode="numeric" maxlength="5" placeholder="00:00" autocomplete="off" id="cSaida"><button onclick="limpa('cSaida')">✕</button></div></div>
       </div>
       <div class="linha2">
         <div><label>Fui almoçar</label>
-          <div class="campo"><input type="time" id="cSaiAlm"><button onclick="limpa('cSaiAlm')">✕</button></div></div>
+          <div class="campo"><input type="text" class="hora" inputmode="numeric" maxlength="5" placeholder="00:00" autocomplete="off" id="cSaiAlm"><button onclick="limpa('cSaiAlm')">✕</button></div></div>
         <div><label>Voltei do almoço</label>
-          <div class="campo"><input type="time" id="cVolAlm"><button onclick="limpa('cVolAlm')">✕</button></div></div>
+          <div class="campo"><input type="text" class="hora" inputmode="numeric" maxlength="5" placeholder="00:00" autocomplete="off" id="cVolAlm"><button onclick="limpa('cVolAlm')">✕</button></div></div>
       </div>
       <label>Observação (opcional)</label>
       <input type="text" id="cObs" placeholder="Ex.: esqueci de marcar">
-      <div class="dica">O almoço não é obrigatório. Para apagar um horário, toque no ✕ e depois em Salvar.</div>
+      <div class="dica">Digite só os números (ex.: 0730 vira 07:30). O almoço não é obrigatório. Para apagar um horário, toque no ✕ e depois em Salvar.</div>
       <button class="btn2" onclick="salvarCorrecao()">Salvar</button>
       <button class="btnExcluir" id="btnExcluir" onclick="excluir()">🗑️ Excluir o dia inteiro</button>
     </details>
@@ -658,7 +660,39 @@
     }).withFailureHandler(falha).getDia(iso);
   }
 
+  /* Campos de hora digitados: 0730 → 07:30 */
+  function normHora(v) {
+    var t = String(v || '').trim();
+    var p = t.match(/^(\d{1,2})\D(\d*)$/);
+    if (p) { if (p[2].length !== 2) return null; t = ('0' + p[1]).slice(-2) + p[2]; }
+    var d = t.replace(/\D/g, '');
+    if (!d) return '';
+    if (d.length <= 2) d = d + '00';
+    if (d.length === 3) d = '0' + d;
+    if (d.length !== 4) return null;
+    var h = +d.slice(0, 2), m = +d.slice(2);
+    if (h > 23 || m > 59) return null;
+    return d.slice(0, 2) + ':' + d.slice(2);
+  }
+  document.querySelectorAll('input.hora').forEach(function(inp) {
+    inp.addEventListener('input', function() {
+      var d = inp.value.replace(/\D/g, '').slice(0, 4);
+      inp.value = d.length > 2 ? d.slice(0, 2) + ':' + d.slice(2) : d;
+      inp.classList.remove('invalida');
+    });
+    inp.addEventListener('blur', function() {
+      var n = normHora(inp.value);
+      if (n === null) inp.classList.add('invalida'); else inp.value = n;
+    });
+  });
+
   function salvarCorrecao() {
+    var ids = ['cEntrada', 'cSaiAlm', 'cVolAlm', 'cSaida'], ruim = null;
+    ids.forEach(function(id) {
+      var n = normHora($(id).value);
+      if (n === null) { $(id).classList.add('invalida'); ruim = ruim || id; } else $(id).value = n;
+    });
+    if (ruim) { $(ruim).focus(); return toast('Confira o horário em vermelho (ex.: 07:30).', true); }
     carregando(true);
     google.script.run.withSuccessHandler(function(e){
       carregando(false); render(e); toast('Horário salvo ✅'); $('detCorrigir').open = false;

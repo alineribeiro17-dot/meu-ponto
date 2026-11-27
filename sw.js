@@ -1,5 +1,5 @@
 /* Meu Ponto - service worker: guarda a tela no celular para abrir sem internet. */
-const VERSAO = 'meu-ponto-v5';
+const VERSAO = 'meu-ponto-v6';
 const ARQUIVOS = ['./', './index.html', './manifest.webmanifest', './config.js', './qrcode.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/favicon-64.png'];
 
