@@ -107,6 +107,8 @@
   .cfg .msg.erro { display: block; background: #FBE4EC; color: #A8325D; }
   .cfg .msg.ok { display: block; background: #E4F1EA; color: #2D6B4F; }
   .cfg .msg.info { display: block; background: #FBE9D4; color: #7A4A12; }
+  .avancado { margin-top: 18px; }
+  .avancado summary { font-size: 16px; font-weight: bold; color: #7A6A70; cursor: pointer; padding: 8px 2px; }
   .btnSec { width: 100%; margin-top: 10px; padding: 12px; font-size: 16px; border: 2px solid #E2CFD5; border-radius: 12px;
             background: #fff; color: #5D3140; font-weight: bold; cursor: pointer; }
 </style>
@@ -243,6 +245,9 @@
       <button class="btn2" onclick="salvarPerfil()">Salvar</button>
     </div>
 
+    <details id="detAvancado" class="avancado">
+      <summary>🔧 Opções avançadas</summary>
+      <div class="dica" style="margin:6px 0 4px">Só para configurar o app. No dia a dia, não é preciso mexer aqui.</div>
     <div class="card">
       <h3>Ligação com a planilha</h3>
       <div id="cfgStatus" class="dica" style="font-size:15px"></div>
@@ -258,6 +263,7 @@
       <button class="btnSec" onclick="mostrarQrCelular()">📲 Mostrar QR Code</button>
       <div id="qrCelular" style="text-align:center;margin-top:12px"></div>
     </div>
+    </details>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -432,7 +438,8 @@
     var ch = window.PONTO_CHAVE || '';
     $('cfgChave').value = '';
     $('cfgStatus').textContent = ch ? 'Chave salva neste celular: ••••••' + ch.slice(-4) : 'Nenhuma chave salva neste celular.';
-    if (motivo === 'chave') msgConfig('erro', '🔑 A chave salva neste celular não confere com a da planilha. Cole a chave correta abaixo, em "Ligação com a planilha".');
+    $('detAvancado').open = (motivo === 'chave');
+    if (motivo === 'chave') msgConfig('erro', '🔑 A chave salva neste celular não confere com a da planilha. Cole a chave correta abaixo, em "Opções avançadas → Ligação com a planilha".');
     else if (motivo === 'perfil') msgConfig('info', '👋 Bem-vinda! Conte como você quer ser chamada e o seu nome completo.');
     else $('cfgMsg').className = 'msg';
     $('cfg').className = 'cfg mostra';
@@ -550,8 +557,12 @@
     var f = $('fila');
     if (!fila.length) { f.style.display = 'none'; return; }
     f.style.display = 'block';
-    f.innerHTML = '📶 <b>' + fila.length + (fila.length > 1 ? ' registros guardados' : ' registro guardado') +
-      '</b> no celular. Vão para a planilha sozinhos quando a internet voltar.';
+    if (navigator.onLine && sincronizando) {
+      f.innerHTML = '⏳ Enviando para a planilha...';
+    } else {
+      f.innerHTML = '📶 <b>' + fila.length + (fila.length > 1 ? ' registros guardados' : ' registro guardado') +
+        '</b> no celular. Vão para a planilha sozinhos quando a internet voltar.';
+    }
   }
   function hojeIso() {
     var d = new Date();
@@ -594,42 +605,36 @@
               volta:   function(h){ return 'Volta do almoço às ' + h + ' ✅'; },
               saida:   function(h){ return 'Saída marcada às ' + h + '. Bom descanso! 🏠'; } };
 
-  function guardarOffline(acao, hora, data) {
-    var it = { acao: acao, data: data || hojeIso(), hora: hora || horaAgora() };
+  /** Registra na hora, no celular, e envia para a planilha em seguida (com ou sem internet). */
+  function guardarLocal(acao) {
+    var it = { acao: acao, data: hojeIso(), hora: horaAgora(), off: !navigator.onLine };
     fila.push(it); salvaFila();
     aplicarLocal(estado, it); if (estado) render(estado);
-    mostrarFrase(acao, it.hora, true);
+    mostrarFrase(acao, it.hora, it.off);
   }
 
   function marcar(acao) {
-    // Sem internet, ou já há registros esperando: guarda na fila para manter a ordem.
-    if (!navigator.onLine || fila.length) { guardarOffline(acao); sincronizar(); return; }
-    var hora = horaAgora(), data = hojeIso();
-    carregando(true);
-    google.script.run.withSuccessHandler(function(e){
-      carregando(false); render(e);
-      var r = e.hojeRegs[e.hojeRegs.length - 1] || {};
-      var h = { entrada: r.entrada, almoco: r.saidaAlmoco, volta: r.voltaAlmoco, saida: r.saida }[acao];
-      mostrarFrase(acao, h, false);
-    }).withFailureHandler(function(err){
-      carregando(false);
-      if (erroDeRede(err)) guardarOffline(acao, hora, data); else falha(err);
-    }).registrar(acao);
+    guardarLocal(acao);
+    sincronizar();
   }
 
   function sincronizar() {
     if (!fila.length || sincronizando || !navigator.onLine) return;
-    sincronizando = true;
+    sincronizando = true; mostraFila();
     var enviando = fila.slice();
+    var tinhaOffline = enviando.some(function(it){ return it.off; });
     google.script.run.withSuccessHandler(function(e){
       sincronizando = false;
       fila = fila.slice(enviando.length); salvaFila();
       renderComFila(e);
       if (e.erros && e.erros.length) toast('Alguns registros precisam de correção: ' + e.erros.join(' | '), true);
-      else toast('Registros sem internet enviados para a planilha ✅');
+      else if (tinhaOffline) toast('Registros feitos sem internet enviados para a planilha ✅');
+      if (fila.length) setTimeout(sincronizar, 200);
     }).withFailureHandler(function(err){
-      sincronizando = false;
-      if (!erroDeRede(err)) falha(err);
+      sincronizando = false; mostraFila();
+      if (chaveInvalida(err)) abrirConfig('chave');
+      else if (!erroDeRede(err)) falha(err);
+      else setTimeout(sincronizar, 10000);   // conexão instável: tenta de novo em 10 segundos
     }).sincronizar(enviando);
   }
 
