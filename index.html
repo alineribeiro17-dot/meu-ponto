@@ -212,7 +212,7 @@
   (function () {
     function guardaCfg(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
     // Endereço da planilha (Apps Script /exec). Sem a chave, ele não dá acesso a nada.
-    var API_PADRAO = '';
+    var API_PADRAO = 'https://script.google.com/macros/s/AKfycbzJOduUwvqyLNUrxbghKz5FUB78NKzU_hIDDV6Abu-FIcPe46gh9oR_ngPOS_1JIn4e/exec';
     var h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
     var chave = h.get('c') || h.get('chave'), api = h.get('a') || h.get('api');
     if (chave) {
